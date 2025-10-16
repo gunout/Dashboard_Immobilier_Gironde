@@ -22,6 +22,12 @@
 <img width="1280" height="1024" alt="Screenshot_2025-10-15_01-57-37" src="https://github.com/user-attachments/assets/0848fd23-3f80-464e-8328-fd37b84e1f6b" />
 <img width="1280" height="1024" alt="Screenshot_2025-10-15_01-59-16" src="https://github.com/user-attachments/assets/1c052645-f4ac-4148-b5da-cb8ec48243fe" />
 
+# METHODE LOCAL ( FICHIER LOCAL )
+
+
+# TÉLÉCHARGEMENT " dvf_2024.csv " avec CURL 
+
+    curl -L -o dvf_2024.csv.gz "https://files.data.gouv.fr/geo-dvf/latest/csv/2024/full.csv.gz"
 
 # RUN PROOGRAM ( GIRONDE - 535 communes ) METHODE LOCAL
 
@@ -29,8 +35,6 @@
 
 PS : pour la methode local s'assurer d'avoir le fichier : dvf_2024.csv dans le meme dossier que Dash.py 
 
-# TÉLÉCHARGEMENT " dvf_2024.csv " avec CURL 
 
-    curl -L -o dvf_2024.csv.gz "https://files.data.gouv.fr/geo-dvf/latest/csv/2024/full.csv.gz"
 
 By Gleaphe 2025 .
