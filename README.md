@@ -29,5 +29,8 @@
 
 PS : pour la methode local s'assurer d'avoir le fichier : dvf_2024.csv dans le meme dossier que Dash.py 
 
+# TÉLÉCHARGEMENT " dvf_2024.csv " avec CURL 
+
+    curl -L -o dvf_2024.csv.gz "https://files.data.gouv.fr/geo-dvf/latest/csv/2024/full.csv.gz"
 
 By Gleaphe 2025 .
