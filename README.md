@@ -25,7 +25,7 @@
 
 # RUN PROOGRAM ( GIRONDE - 535 communes ) METHODE LOCAL
 
-        streamlit run Dash.py
+    streamlit run Dash.py
 
 PS : pour la methode local s'assurer d'avoir le fichier : dvf_2024.csv dans le meme dossier que Dash.py 
 
