@@ -1,4 +1,4 @@
-# Dashboard_Immobilier_Gironde
+# Dashboard_Immobilier_Gironde // 2 METHODE - HTTP ou LOCAL ( Données Année 2024 ) 
 🏘️ Dashboard Immobilier Gironde  ℹ️ Données réelles DVF 2024 pour la commune de Aiguillon (INSEE 33001), provenant de data.gouv.fr
 
 <img width="662" height="465" alt="Screenshot_2025-10-15_02-06-59" src="https://github.com/user-attachments/assets/6e9a38a5-6a2d-4524-9a6d-bf3d19c85eab" />
