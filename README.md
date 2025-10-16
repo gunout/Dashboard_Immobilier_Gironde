@@ -11,15 +11,23 @@
 
     pip install beautifulsoup4 streamlit pandas requests plotly
 
-# RUN PROGRAM ( GIRONDE - 535 communes.) 
+# RUN PROGRAM ( GIRONDE - 535 communes.) METHODE HTTP
 
     streamlit run Dashboard_Bordeaux.py
 
-# RUN PROGRAM ( GIRONDE - PESSAC ) 
+# RUN PROGRAM ( GIRONDE - PESSAC ) METHODE HTTP
 
     streamlit run dashboard_bordeaux_pessac.py
 
 <img width="1280" height="1024" alt="Screenshot_2025-10-15_01-57-37" src="https://github.com/user-attachments/assets/0848fd23-3f80-464e-8328-fd37b84e1f6b" />
 <img width="1280" height="1024" alt="Screenshot_2025-10-15_01-59-16" src="https://github.com/user-attachments/assets/1c052645-f4ac-4148-b5da-cb8ec48243fe" />
+
+
+# RUN PROOGRAM ( GIRONDE - 535 communes ) METHODE LOCAL
+
+        streamlit run Dash.py
+
+PS : pour la methode local s'assurer d'avoir le fichier : dvf_2024.csv dans le meme dossier que Dash.py 
+
 
 By Gleaphe 2025 .
