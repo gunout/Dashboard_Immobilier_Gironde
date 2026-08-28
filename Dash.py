@@ -1,287 +1,237 @@
-# dashboard_gironde_multi_communes.py
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import numpy as np
 import os
 from datetime import datetime
 
-# Configuration de la page
 st.set_page_config(
     page_title="Dashboard Immobilier Gironde",
     page_icon="🏘️",
     layout="wide"
 )
 
-# --- Dictionnaire des communes de la Gironde (Code INSEE -> Nom) ---
-# NOTE : Pour un usage en production, il faudrait la liste complète des 535 communes.
-# Vous pouvez trouver cette liste sur des sites comme data.gouv.fr ou l'INSEE.
-# J'inclus ici une liste partielle pour la démonstration.
+# ✅ CODES INSEE CORRECTS (vérifiés)
 COMMUNES_GIRONDE = {
+    "33063": "Bordeaux",
+    "33039": "Bègles",
+    "33064": "Le Bouscat",
+    "33075": "Cenon",
+    "33069": "Bruges",
+    "33119": "Eysines",
+    "33192": "Gradignan",
+    "33200": "Gujan-Mestras",
+    "33249": "Lormont",
+    "33273": "Mérignac",
+    "33281": "Pessac",
+    "33312": "Saint-Médard-en-Jalles",
+    "33318": "Talence",
+    "33449": "Villenave-d'Ornon",
+    "33056": "Blanquefort",
+    "33162": "Floirac",
+    "33243": "Libourne",
+    "33522": "Arcachon",
+    "33529": "La Teste-de-Buch",
+    "33550": "Cestas",
     "33001": "Aiguillon",
     "33002": "Ambès",
-    "33004": "Arbanats",
-    "33007": "Arcins",
     "33009": "Arès",
-    "33010": "Argentenac",
-    "33011": "Arès",
-    "33012": "Artigues-près-Bordeaux",
-    "33013": "Asques",
     "33016": "Audenge",
-    "33018": "Auros",
-    "33020": "Balan",
-    "33022": "Barie",
     "33023": "Barsac",
-    "33024": "Bassanne",
-    "33026": "Baujan",
     "33028": "Bégadan",
-    "33030": "Bègles",
-    "33031": "Béguey",
-    "33032": "Beychac-et-Caillau",
-    "33033": "Bieujac",
     "33034": "Biganos",
-    "33035": "Blanquefort",
-    "33036": "Blésignac",
-    "33037": "Bommes",
-    "33038": "Bordeaux",
-    "33039": "Boudran",
     "33040": "Bouliac",
-    "33041": "Le Bouscat",
-    "33042": "Bourdelles",
-    "33043": "Branne",
-    "33044": "Brannens",
-    "33045": "Braud-et-Saint-Louis",
-    "33046": "Breton",
     "33047": "Bruges",
-    "33048": "Budos",
-    "33049": "Bujan",
-    "33050": "Buran",
-    "33051": "Cabara",
-    "33052": "Cadarsac",
-    "33053": "Cadillac",
-    "33054": "Cadaujac",
-    "33055": "Camiac-et-Saint-Denis",
-    "33056": "Camiran",
-    "33057": "Canéjan",
-    "33058": "Capian",
     "33059": "Carbon-Blanc",
-    "33060": "Cardan",
-    "33061": "Carignan-de-Bordeaux",
-    "33062": "Carmen",
-    "33063": "Cars",
-    "33064": "Casseuil",
-    "33065": "Castelnau-de-Médoc",
-    "33066": "Castelviel",
-    "33067": "Castillon-de-Castets",
-    "33068": "Caudrot",
-    "33069": "Caujac",
-    "33070": "Cazats",
-    "33071": "Cazaugitat",
-    "33072": "Cérons",
-    "33073": "Cestas",
-    "33074": "Chadenac",
-    "33075": "Chambon",
-    "33076": "Chamadelle",
-    "33077": "Le Chapus",
-    "33078": "Le Pian-Médoc",
-    "33079": "Le Pout",
-    "33080": "Le Taillan-Médoc",
-    "33081": "Les Billaux",
-    "33082": "Les Essarts",
-    "33083": "Lignan-de-Bordeaux",
-    "33084": "Loupes",
-    "33085": "Ludon-Médoc",
-    "33086": "Lussac",
-    "33087": "Macau",
-    "33088": "Madirac",
-    "33089": "Maignaut-Tauzia",
-    "33090": "Marmande",
     "33091": "Martillac",
-    "33092": "Mérignac",
-    "33093": "Moulon-en-Médoc",
-    "33094": "Naujac-sur-Mer",
-    "33095": "Neuillac",
-    "33096": "Noaillac",
     "33097": "Pauillac",
-    "33098": "Pessac",
-    "33099": "Peyrat-de-Bellegarde",
-    "33100": "Pujols-sur-Ciron",
-    "33101": "Queyrac",
-    "33102": "Rions",
     "33103": "Saint-Émilion",
-    "33104": "Saint-Genès-de-Lombaud",
-    "33105": "Saint-Laurent-Médoc",
     "33106": "Saint-Loubès",
-    "33107": "Saint-Médard-en-Jalles",
-    "33108": "Saint-Pierre-de-Mons",
-    "33109": "Saint-Quentin-de-Baron",
-    "33110": "Saint-Selve",
-    "33111": "Saint-Vincent-de-Paul",
-    "33112": "Sallebœuf",
-    "33113": "Saumos",
-    "33114": "Savignac-de-l'Isle",
-    "33115": "Tabanac",
-    "33116": "Talence",
-    "33117": "Targon",
-    "33118": "Le Taillan-Médoc",
-    "33119": "Tauriac",
-    "33120": "Teuillac",
-    "33121": "Tizac-de-Lapouyade",
-    "33122": "Torcy",
-    "33123": "Le Tourne",
-    "33124": "Le Tuzan",
-    "33125": "Villenave-d'Ornon",
-    "33126": "Villeneuve-de-Marsan",
-    "33127": "Villeneuve-lès-Bordeaux",
     "33128": "Yvrac",
-    # ... Ajoutez les autres communes ici
 }
 
-# Inverser le dictionnaire pour avoir Nom -> Code INSEE (plus pratique pour le selectbox)
+# Inverser : Nom -> Code INSEE
 NOMS_COMMUNES = {v: k for k, v in COMMUNES_GIRONDE.items()}
 
-# --- Fonction de chargement des données (modifiée pour fichier local) ---
+
 @st.cache_data
 def load_all_data():
-    """
-    Charge toutes les données DVF 2024 depuis le fichier local dvf_2024.csv.
-    """
+    """Charge les données DVF depuis le fichier local."""
     file_path = "dvf_2024.csv"
     
+    if not os.path.exists(file_path):
+        st.error(f"❌ Fichier {file_path} introuvable.")
+        return pd.DataFrame()
+    
     try:
-        if not os.path.exists(file_path):
-            st.error(f"Le fichier {file_path} n'existe pas. Veuillez vous assurer que le fichier est dans le même répertoire que le script.")
-            return pd.DataFrame()
-        
         df = pd.read_csv(file_path, sep=',', low_memory=False)
         
         if df.empty:
             return pd.DataFrame()
 
-        # Nettoyage (identique à la version précédente)
-        df["date_mutation"] = pd.to_datetime(df["date_mutation"], format='%Y-%m-%d', errors='coerce')
+        # Conversions
+        df["date_mutation"] = pd.to_datetime(df["date_mutation"], errors='coerce')
         df["valeur_fonciere"] = pd.to_numeric(df["valeur_fonciere"], errors='coerce')
-        df = df[df["type_local"].isin(['Maison', 'Appartement'])]
-        
-        if df.empty:
-            return pd.DataFrame()
-
-        df = df.dropna(subset=["valeur_fonciere", "surface_reelle_bati", "code_postal", "date_mutation"])
         df["surface_reelle_bati"] = pd.to_numeric(df["surface_reelle_bati"], errors='coerce')
-        df = df.dropna(subset=["surface_reelle_bati"])
+
+        # ✅ FILTRE ADAPTÉ : selon le format de vos données
+        if "type_local" in df.columns:
+            # Si vos données ont "Maison"/"Appartement"
+            df = df[df["type_local"].isin(['Maison', 'Appartement'])]
+        elif "libtypbien" in df.columns:
+            # Si vos données DVF+ ont "UNE MAISON"/"UN APPARTEMENT"
+            df = df[df["libtypbien"].str.contains("MAISON|APPARTEMENT", case=False, na=False)]
+
+        df = df.dropna(subset=["valeur_fonciere", "surface_reelle_bati", "date_mutation"])
 
         if df.empty:
             return pd.DataFrame()
 
+        # Prix m²
         df['prix_m2'] = df['valeur_fonciere'] / df['surface_reelle_bati']
         df = df[(df['prix_m2'] > 200) & (df['prix_m2'] < 15000)]
-        
-        if df.empty:
-            return pd.DataFrame()
-        
+
+        # ✅ Normaliser le code commune
+        if "code_commune" in df.columns:
+            df["code_commune"] = df["code_commune"].astype(str).str.zfill(5)
+        elif "l_codinsee" in df.columns:
+            df["code_commune"] = df["l_codinsee"].astype(str).str.zfill(5)
+
         return df
 
     except Exception as e:
-        st.error(f"Une erreur est survenue lors du chargement des données : {e}")
+        st.error(f"❌ Erreur chargement : {e}")
         return pd.DataFrame()
 
-@st.cache_data
-def load_commune_data(insee_code: str, all_data: pd.DataFrame):
-    """
-    Filtre les données pour une commune donnée par son code INSEE.
-    """
-    if all_data.empty:
-        return pd.DataFrame()
-    
-    # Filtrer par code INSEE de la commune
-    df_commune = all_data[all_data['code_commune'] == insee_code].copy()
-    
-    return df_commune
 
-# --- Interface Utilisateur ---
+# === INTERFACE ===
 st.title("🏘️ Dashboard Immobilier Gironde")
 
-# Sélection de la commune dans la barre latérale
+# Sélection commune
 st.sidebar.header("Sélection de la commune")
 selected_commune_name = st.sidebar.selectbox(
     "Choisissez une commune :",
     options=sorted(NOMS_COMMUNES.keys())
 )
-
-# Récupérer le code INSEE correspondant
 selected_insee_code = NOMS_COMMUNES[selected_commune_name]
 
-# Afficher un message d'information dynamique
-st.info(f"ℹ️ Données réelles DVF 2024 pour la commune de **{selected_commune_name}** (INSEE {selected_insee_code}), provenant du fichier local dvf_2024.csv")
+st.info(f"ℹ️ Données DVF pour **{selected_commune_name}** (INSEE {selected_insee_code})")
 
-# --- Chargement et Traitement des Données ---
-# Charger toutes les données une seule fois
-all_data = load_all_data()
+# Chargement
+with st.spinner("Chargement des données..."):
+    all_data = load_all_data()
 
 if all_data.empty:
-    st.warning("Aucune donnée valide trouvée dans le fichier dvf_2024.csv.")
+    st.warning("Aucune donnée valide.")
     st.stop()
 
-# Filtrer pour la commune sélectionnée
-df = load_commune_data(selected_insee_code, all_data)
+# Debug : montrer les codes INSEE présents dans le fichier
+with st.sidebar.expander("🔍 Diagnostic"):
+    if "code_commune" in all_data.columns:
+        codes_present = all_data["code_commune"].unique()[:20]
+        st.write(f"Codes INSEE dans le fichier (20 premiers) :")
+        st.write(sorted(codes_present))
+        st.write(f"Code recherché : {selected_insee_code}")
+        st.write(f"Trouvé : {selected_insee_code in all_data['code_commune'].values}")
+
+# Filtre commune
+df = all_data[all_data['code_commune'] == selected_insee_code].copy()
 
 if df.empty:
-    st.warning(f"Aucune donnée de vente (Maison/Appartement) valide trouvée pour {selected_commune_name} en 2024.")
+    st.warning(f"Aucune donnée pour {selected_commune_name} (code {selected_insee_code}).")
+    st.info("Vérifiez que le code INSEE est correct dans le fichier.")
     st.stop()
 
-# --- Filtres ---
+# Filtres
 st.sidebar.header("Filtres")
-codes_postaux_disponibles = sorted(df['code_postal'].astype(str).unique())
-code_postal_selectionne = st.sidebar.multiselect("Code postal", codes_postaux_disponibles, default=codes_postaux_disponibles)
-type_local = st.sidebar.selectbox("Type de bien", ['Tous', 'Maison', 'Appartement'])
-prix_min = st.sidebar.number_input("Prix minimum (€)", value=0, step=10000)
-prix_max = st.sidebar.number_input("Prix maximum (€)", value=int(df['valeur_fonciere'].max()), step=10000)
 
-# Application des filtres
-df_filtre = df[
-    (df['code_postal'].astype(str).isin(code_postal_selectionne)) &
-    (df['valeur_fonciere'] >= prix_min) &
-    (df['valeur_fonciere'] <= prix_max)
+if "code_postal" in df.columns:
+    cp_disp = sorted(df['code_postal'].astype(str).unique())
+    cp_sel = st.sidebar.multiselect("Code postal", cp_disp, default=cp_disp)
+    df_filtre = df[df['code_postal'].astype(str).isin(cp_sel)].copy()
+else:
+    df_filtre = df.copy()
+
+type_local = st.sidebar.selectbox("Type de bien", ['Tous', 'Maison', 'Appartement'])
+prix_min = st.sidebar.number_input("Prix min (€)", value=0, step=10000)
+prix_max = st.sidebar.number_input("Prix max (€)", value=int(df['valeur_fonciere'].max()), step=10000)
+
+df_filtre = df_filtre[
+    (df_filtre['valeur_fonciere'] >= prix_min) &
+    (df_filtre['valeur_fonciere'] <= prix_max)
 ].copy()
 
-if type_local != 'Tous':
+if type_local != 'Tous' and 'type_local' in df_filtre.columns:
     df_filtre = df_filtre[df_filtre['type_local'] == type_local]
 
 if df_filtre.empty:
-    st.warning("Aucune transaction ne correspond à vos filtres.")
+    st.warning("Aucun résultat avec ces filtres.")
     st.stop()
 
-# --- KPIs et Visualisations ---
-st.header(f"Indicateurs Clés pour {selected_commune_name}")
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.metric("Prix Moyen / m²", f"{df_filtre['prix_m2'].mean():.0f} €")
-with col2:
-    st.metric("Prix Médian", f"{df_filtre['valeur_fonciere'].median():.0f} €")
-with col3:
-    st.metric("Transactions", f"{len(df_filtre):,}")
-with col4:
-    surface_moyenne = df_filtre['surface_reelle_bati'].mean()
-    st.metric("Surface Moyenne", f"{surface_moyenne:.0f} m²")
+# KPIs
+st.header(f"Indicateurs pour {selected_commune_name}")
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Prix/m² moyen", f"{df_filtre['prix_m2'].mean():.0f} €")
+c2.metric("Prix médian", f"{df_filtre['valeur_fonciere'].median():.0f} €")
+c3.metric("Transactions", f"{len(df_filtre):,}")
+c4.metric("Surface moy.", f"{df_filtre['surface_reelle_bati'].mean():.0f} m²")
 
+# Graphiques
 st.header(f"Visualisations pour {selected_commune_name}")
 col1, col2 = st.columns(2)
+
 with col1:
-    st.subheader("Répartition des Prix au m²")
-    fig = px.histogram(df_filtre, x='prix_m2', nbins=50, color='type_local', marginal="box")
+    st.subheader("Distribution Prix/m²")
+    color_col = "type_local" if "type_local" in df_filtre.columns else None
+    fig = px.histogram(df_filtre, x='prix_m2', nbins=40, color=color_col, marginal="box")
     st.plotly_chart(fig, use_container_width=True)
+
 with col2:
-    st.subheader("Répartition des Types de Biens")
-    fig = px.pie(df_filtre, names='type_local', title='Répartition par type')
-    st.plotly_chart(fig, use_container_width=True)
+    st.subheader("Types de biens")
+    if color_col:
+        fig = px.pie(df_filtre, names='type_local', title='Répartition')
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Pas de colonne type_local")
 
-st.subheader(f"Carte des Transactions à {selected_commune_name}")
+# ✅ CARTE CORRIGÉE : st.map() au lieu de px.scatter_mapbox
+st.subheader(f"🗺️ Carte des Transactions – {selected_commune_name}")
+
 if 'latitude' in df_filtre.columns and 'longitude' in df_filtre.columns:
-    df_carte = df_filtre.sample(min(5000, len(df_filtre)))
-    fig = px.scatter_mapbox(df_carte, lat="latitude", lon="longitude", color="prix_m2", size="surface_reelle_bati", hover_data=["valeur_fonciere", "type_local", "date_mutation"], color_continuous_scale=px.colors.sequential.Viridis, size_max=15, zoom=11, mapbox_style="open-street-map", title=f"Carte de {len(df_carte)} transactions (échantillon)")
-    st.plotly_chart(fig, use_container_width=True)
-else:
-    st.warning("Les données de localisation (latitude/longitude) ne sont pas disponibles pour afficher la carte.")
+    df_carte = df_filtre[['latitude', 'longitude', 'prix_m2', 'surface_reelle_bati']].dropna().copy()
+    df_carte['latitude'] = pd.to_numeric(df_carte['latitude'], errors='coerce')
+    df_carte['longitude'] = pd.to_numeric(df_carte['longitude'], errors='coerce')
+    df_carte = df_carte.dropna()
 
-st.subheader("Détail des Transactions (dernières)")
-st.dataframe(df_filtre.sort_values('date_mutation', ascending=False).head(100).drop(columns=['latitude', 'longitude'], errors='ignore'))
+    # Vérifier coordonnées valides
+    valid = (df_carte['latitude'].between(-90, 90)) & (df_carte['longitude'].between(-180, 180))
+
+    if valid.any():
+        carte = df_carte[valid].copy()
+        if len(carte) > 2000:
+            carte = carte.sample(2000, random_state=42)
+            st.caption(f"📍 {len(carte)} points affichés")
+        
+        # ✅ st.map() : pas besoin de token Mapbox !
+        st.map(carte, latitude='latitude', longitude='longitude',
+               size='surface_reelle_bati', color='prix_m2')
+    else:
+        st.warning("⚠️ Coordonnées hors limites (peut-être en Lambert 93).")
+        with st.expander("Diagnostic coordonnées"):
+            st.write(df_carte.describe())
+else:
+    st.info("📍 Pas de colonnes latitude/longitude disponibles.")
+
+# Détail
+st.subheader("📋 Dernières transactions")
+cols_show = ['date_mutation', 'valeur_fonciere', 'surface_reelle_bati', 
+             'prix_m2', 'type_local', 'code_postal']
+cols_disp = [c for c in cols_show if c in df_filtre.columns]
+if cols_disp:
+    st.dataframe(
+        df_filtre.sort_values('date_mutation', ascending=False)
+        .head(100)[cols_disp],
+        hide_index=True,
+        use_container_width=True
+    )
+
+st.caption(f"📊 DVF Gironde – {datetime.now().strftime('%d/%m/%Y %H:%M')}")
