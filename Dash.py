@@ -213,8 +213,8 @@ with col2:
         fig = px.pie(df_filtre, names='type_local')
         st.plotly_chart(fig, width='stretch')
 
-# --- Carte avec st.map ---
-st.subheader(f"Carte - {selected_commune_name}")
+# --- Carte avec st.map (remplace scatter_mapbox) ---
+st.subheader(f"Carte des transactions - {selected_commune_name}")
 if 'latitude' in df_filtre.columns and 'longitude' in df_filtre.columns:
     map_data = df_filtre[['latitude', 'longitude', 'prix_m2', 'surface_reelle_bati']].copy()
     map_data['latitude'] = pd.to_numeric(map_data['latitude'], errors='coerce')
