@@ -116,7 +116,6 @@ NOMS_COMMUNES = {v: k for k, v in COMMUNES_GIRONDE.items()}
 
 @st.cache_data
 def load_all_data():
-    """Charge le fichier DVF et nettoie les données."""
     file_path = "dvf_2024.csv"
     if not os.path.exists(file_path):
         st.error(f"Fichier {file_path} introuvable.")
@@ -125,38 +124,23 @@ def load_all_data():
         df = pd.read_csv(file_path, sep=',', low_memory=False)
         if df.empty:
             return pd.DataFrame()
-
-        # Conversion des dates
         if "date_mutation" in df.columns:
             df["date_mutation"] = pd.to_datetime(df["date_mutation"], errors='coerce')
-        # Colonnes numériques
         if "valeur_fonciere" in df.columns:
             df["valeur_fonciere"] = pd.to_numeric(df["valeur_fonciere"], errors='coerce')
         if "surface_reelle_bati" in df.columns:
             df["surface_reelle_bati"] = pd.to_numeric(df["surface_reelle_bati"], errors='coerce')
-
-        # Filtrage sur le type de bien (Maison / Appartement)
         if "type_local" in df.columns:
             df = df[df["type_local"].isin(['Maison', 'Appartement'])]
         elif "libtypbien" in df.columns:
             df = df[df["libtypbien"].str.contains("MAISON|APPARTEMENT", case=False, na=False)]
-
-        # Suppression des lignes sans prix, surface ou date
         df = df.dropna(subset=["valeur_fonciere", "surface_reelle_bati", "date_mutation"])
-
         if df.empty:
             return pd.DataFrame()
-
-        # Calcul du prix au m²
         df['prix_m2'] = df['valeur_fonciere'] / df['surface_reelle_bati']
-
-        # Filtrage des valeurs aberrantes
         df = df[(df['prix_m2'] > 200) & (df['prix_m2'] < 15000)]
-
         if df.empty:
             return pd.DataFrame()
-
-        # Récupération du code commune
         if "code_commune" in df.columns:
             df["code_commune"] = df["code_commune"].astype(str).str.zfill(5)
         elif "l_codinsee" in df.columns:
@@ -164,13 +148,11 @@ def load_all_data():
         else:
             st.error("Colonne code_commune manquante.")
             return pd.DataFrame()
-
         return df
     except Exception as e:
-        st.error(f"Erreur lors du chargement : {e}")
+        st.error(f"Erreur : {e}")
         return pd.DataFrame()
 
-# --- Interface utilisateur ---
 st.title("Dashboard Immobilier Gironde")
 
 st.sidebar.header("Commune")
@@ -178,28 +160,22 @@ selected_commune_name = st.sidebar.selectbox("Choisissez :", sorted(NOMS_COMMUNE
 selected_insee_code = NOMS_COMMUNES[selected_commune_name]
 st.info(f"Données pour **{selected_commune_name}** (INSEE {selected_insee_code})")
 
-with st.spinner("Chargement des données..."):
+with st.spinner("Chargement..."):
     all_data = load_all_data()
-
 if all_data.empty:
-    st.warning("Aucune donnée disponible. Vérifiez le fichier CSV.")
+    st.warning("Aucune donnée disponible.")
     st.stop()
 
-# Diagnostic (optionnel)
 with st.sidebar.expander("Diagnostic"):
     st.write(f"Code recherché : {selected_insee_code}")
     st.write(f"Trouvé : {'OUI' if selected_insee_code in all_data['code_commune'].values else 'NON'}")
 
-# Filtrer par commune
 df = all_data[all_data['code_commune'] == selected_insee_code].copy()
 if df.empty:
     st.warning(f"Aucune transaction pour {selected_commune_name}.")
     st.stop()
 
-# Filtres supplémentaires
 st.sidebar.header("Filtres")
-
-# Code postal (si disponible)
 if "code_postal" in df.columns and not df["code_postal"].isna().all():
     cp_disp = sorted(df['code_postal'].astype(str).unique())
     cp_sel = st.sidebar.multiselect("Code postal", cp_disp, default=cp_disp)
@@ -207,104 +183,71 @@ if "code_postal" in df.columns and not df["code_postal"].isna().all():
 else:
     df_filtre = df.copy()
 
-# Type de local
 types_dispo = ["Tous"]
 if "type_local" in df_filtre.columns:
     types_dispo.extend(sorted(df_filtre["type_local"].dropna().unique()))
-type_local = st.sidebar.selectbox("Type de bien", types_dispo)
+type_local = st.sidebar.selectbox("Type", types_dispo)
+prix_min = st.sidebar.number_input("Prix min", 0, step=10000, value=0)
+prix_max = st.sidebar.number_input("Prix max", int(df['valeur_fonciere'].max()) if not df.empty else 1000000, step=10000)
 
-# Prix
-prix_min = st.sidebar.number_input("Prix min (€)", 0, step=10000, value=0)
-prix_max = st.sidebar.number_input("Prix max (€)", int(df['valeur_fonciere'].max()) if not df.empty else 1000000, step=10000)
-
-# Application des filtres
 df_filtre = df_filtre[(df_filtre['valeur_fonciere'] >= prix_min) & (df_filtre['valeur_fonciere'] <= prix_max)].copy()
 if type_local != 'Tous' and "type_local" in df_filtre.columns:
     df_filtre = df_filtre[df_filtre['type_local'] == type_local]
-
 if df_filtre.empty:
-    st.warning("Aucun résultat avec ces filtres.")
+    st.warning("Aucun résultat.")
     st.stop()
 
-# --- Métriques ---
 c1, c2, c3, c4 = st.columns(4)
-c1.metric("Prix/m² moyen", f"{df_filtre['prix_m2'].mean():.0f} €")
-c2.metric("Prix médian", f"{df_filtre['valeur_fonciere'].median():.0f} €")
-c3.metric("Nombre de transactions", f"{len(df_filtre):,}")
-c4.metric("Surface moyenne", f"{df_filtre['surface_reelle_bati'].mean():.0f} m²")
+c1.metric("Prix/m²", f"{df_filtre['prix_m2'].mean():.0f} €")
+c2.metric("Médian", f"{df_filtre['valeur_fonciere'].median():.0f} €")
+c3.metric("Transactions", f"{len(df_filtre):,}")
+c4.metric("Surface moy", f"{df_filtre['surface_reelle_bati'].mean():.0f} m²")
 
-# --- Graphiques ---
 col1, col2 = st.columns(2)
 color_col = "type_local" if "type_local" in df_filtre.columns else None
-
 with col1:
-    fig_hist = px.histogram(
-        df_filtre, x='prix_m2', nbins=40,
-        color=color_col, marginal="box",
-        title="Distribution des prix au m²"
-    )
-    st.plotly_chart(fig_hist, use_container_width=True)
-
+    fig = px.histogram(df_filtre, x='prix_m2', nbins=40, color=color_col, marginal="box")
+    st.plotly_chart(fig, width='stretch')
 with col2:
     if color_col:
-        fig_pie = px.pie(df_filtre, names='type_local', title="Répartition par type")
-        st.plotly_chart(fig_pie, use_container_width=True)
-    else:
-        st.info("Pas de colonne 'type_local' pour le graphique en camembert.")
+        fig = px.pie(df_filtre, names='type_local')
+        st.plotly_chart(fig, width='stretch')
 
-# --- Carte interactive (avec st.map) ---
-st.subheader(f"Carte des transactions - {selected_commune_name}")
-
-# Vérification des colonnes de coordonnées
+# --- Carte avec st.map ---
+st.subheader(f"Carte - {selected_commune_name}")
 if 'latitude' in df_filtre.columns and 'longitude' in df_filtre.columns:
-    # Préparation des données
     map_data = df_filtre[['latitude', 'longitude', 'prix_m2', 'surface_reelle_bati']].copy()
     map_data['latitude'] = pd.to_numeric(map_data['latitude'], errors='coerce')
     map_data['longitude'] = pd.to_numeric(map_data['longitude'], errors='coerce')
     map_data = map_data.dropna()
-    # Filtrer les coordonnées valides
     map_data = map_data[
         (map_data['latitude'].between(-90, 90)) &
         (map_data['longitude'].between(-180, 180))
     ]
-
     if not map_data.empty:
-        # Échantillonnage pour ne pas surcharger la carte
         sample_size = min(2000, len(map_data))
         if sample_size > 0:
             map_sample = map_data.sample(n=sample_size, random_state=42)
-            st.map(
-                map_sample,
-                latitude="latitude",
-                longitude="longitude",
-                size="surface_reelle_bati",   # la taille des points
-                color="prix_m2"               # la couleur selon le prix
-            )
+            st.map(map_sample, latitude="latitude", longitude="longitude",
+                   size="surface_reelle_bati", color="prix_m2")
         else:
-            st.warning("Aucune donnée à afficher sur la carte.")
+            st.warning("Aucune donnée à afficher.")
     else:
-        st.warning("Coordonnées invalides ou absentes.")
+        st.warning("Coordonnées hors limites.")
 else:
-    st.info("Les colonnes 'latitude' et 'longitude' ne sont pas disponibles dans les données.")
+    st.info("Pas de coordonnées.")
 
 # --- Dernières transactions ---
 st.subheader("Dernières transactions")
-cols_afficher = []
-for col in ["date_mutation", "valeur_fonciere", "surface_reelle_bati", "prix_m2", "type_local", "code_postal"]:
-    if col in df_filtre.columns:
-        cols_afficher.append(col)
+cols = [c for c in ["date_mutation", "valeur_fonciere", "surface_reelle_bati", "prix_m2", "type_local", "code_postal"] if c in df_filtre.columns]
+if cols:
+    aff = df_filtre.sort_values('date_mutation', ascending=False).head(100).copy()
+    if "valeur_fonciere" in aff.columns:
+        aff["valeur_fonciere"] = aff["valeur_fonciere"].apply(lambda x: f"{x:,.0f} €")
+    if "prix_m2" in aff.columns:
+        aff["prix_m2"] = aff["prix_m2"].apply(lambda x: f"{x:,.0f} €/m²")
+    if "date_mutation" in aff.columns:
+        aff["date_mutation"] = aff["date_mutation"].dt.strftime("%d/%m/%Y")
+    st.dataframe(aff[cols], hide_index=True, width='stretch')
 
-if cols_afficher:
-    recent = df_filtre.sort_values('date_mutation', ascending=False).head(100).copy()
-    # Mise en forme
-    if "valeur_fonciere" in recent.columns:
-        recent["valeur_fonciere"] = recent["valeur_fonciere"].apply(lambda x: f"{x:,.0f} €")
-    if "prix_m2" in recent.columns:
-        recent["prix_m2"] = recent["prix_m2"].apply(lambda x: f"{x:,.0f} €/m²")
-    if "date_mutation" in recent.columns:
-        recent["date_mutation"] = recent["date_mutation"].dt.strftime("%d/%m/%Y")
-    st.dataframe(recent[cols_afficher], hide_index=True, use_container_width=True)
-else:
-    st.info("Aucune colonne à afficher.")
-
-st.caption(f"Dashboard Gironde - dernière mise à jour : {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+st.caption(f"Dashboard Gironde - {datetime.now().strftime('%d/%m/%Y %H:%M')}")
