@@ -213,31 +213,7 @@ with col2:
         fig = px.pie(df_filtre, names='type_local')
         st.plotly_chart(fig, width='stretch')
 
-# ------------------------------------------------------------
-# CARTE avec st.map (remplace scatter_mapbox)
-# ------------------------------------------------------------
-st.subheader(f"Carte des transactions - {selected_commune_name}")
-if 'latitude' in df_filtre.columns and 'longitude' in df_filtre.columns:
-    map_data = df_filtre[['latitude', 'longitude', 'prix_m2', 'surface_reelle_bati']].copy()
-    map_data['latitude'] = pd.to_numeric(map_data['latitude'], errors='coerce')
-    map_data['longitude'] = pd.to_numeric(map_data['longitude'], errors='coerce')
-    map_data = map_data.dropna()
-    map_data = map_data[
-        (map_data['latitude'].between(-90, 90)) &
-        (map_data['longitude'].between(-180, 180))
-    ]
-    if not map_data.empty:
-        sample_size = min(2000, len(map_data))
-        if sample_size > 0:
-            map_sample = map_data.sample(n=sample_size, random_state=42)
-            st.map(map_sample, latitude="latitude", longitude="longitude",
-                   size="surface_reelle_bati", color="prix_m2")
-        else:
-            st.warning("Aucune donnée à afficher.")
-    else:
-        st.warning("Coordonnées hors limites.")
-else:
-    st.info("Pas de coordonnées.")
+
 
 # --- Dernières transactions ---
 st.subheader("Dernières transactions")
